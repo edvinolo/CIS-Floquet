@@ -1,0 +1,6 @@
+[submodule "Effective-Ham"]
+	path = Effective-Ham
+	url = https://github.com/kamelstekspizza/Effective-Ham.git
+[submodule "format-plot"]
+	path = format-plot
+	url = https://github.com/kamelstekspizza/format-plot.git
