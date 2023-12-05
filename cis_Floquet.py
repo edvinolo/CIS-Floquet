@@ -1,4 +1,3 @@
-from __future__ import division
 import os 
 import sys
 import numpy as np
@@ -7,18 +6,20 @@ import scipy.linalg as sl
 import scipy.sparse as sp
 import scipy.sparse.linalg as spl
 
-from effective_Hamiltonian import complex_Rabi
 from class_Floquet import Floquet_system
-sys.path.append('/home/edvinolofsson/bin/')
+
+sys.path.append('./Effective-Ham/src/')
+sys.path.append('./plot_utils/')
 from plot_utils import format_plot
+from effective_Hamiltonian import complex_Rabi
 
 
 
 
-z_re = np.loadtxt('dipoles_re_He_l_5_350.dat')
-z_im = np.loadtxt('dipoles_im_He_l_5_350.dat')
-H_re = np.loadtxt('mat_re_He_l_5_350.dat')
-H_im = np.loadtxt('mat_im_He_l_5_350.dat')
+z_re = np.loadtxt('dipoles_re.dat')
+z_im = np.loadtxt('dipoles_im.dat')
+H_re = np.loadtxt('mat_re.dat')
+H_im = np.loadtxt('mat_im.dat')
 
 z = z_re + 1j*z_im
 #z = np.zeros(z_re.shape,dtype = np.complex128)
