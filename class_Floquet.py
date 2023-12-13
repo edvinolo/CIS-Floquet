@@ -2,7 +2,7 @@ import numpy as np
 
 #Need to set environment varialbe to use propack
 import os
-os.environ["SCIPY_USE_PROPACK"] = "true"
+#os.environ["SCIPY_USE_PROPACK"] = "true"
 import scipy.linalg as sl
 import scipy.sparse as sp
 import scipy.sparse.linalg as spl
@@ -24,10 +24,6 @@ class Floquet_system:
         self.N_floquet = self.N_elements*self.N_floquet_blocks
 
         self.m_omega = np.array([m*self.omega for m in range(-self.N_blocks_abs,self.N_blocks_em+1)])
-        print(self.omega)
-        print(self.m_omega)
-
-        
 
         self.diag = np.zeros(self.N_floquet,dtype = np.complex128)
         self.diag_inv = np.zeros(self.N_floquet,dtype = np.complex128)
@@ -37,21 +33,20 @@ class Floquet_system:
         for i in range(self.N_floquet):
             if np.abs(self.diag[i]) >= 1e-13:
                 self.diag_inv[i] = 1.0/self.diag[i]
-
-        print(self.diag_inv)
         
         self.M_inv = sp.diags(self.diag_inv)
         self.M = sp.diags(self.diag)
 
-        self.H = sp.csc_array(self.H)
-        self.V = sp.csc_array(self.V)
+        self.H = sp.csc_matrix(self.H)
+        self.V = sp.csc_matrix(self.V)
 
 
         self.H_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.matvec,rmatvec=self.rmatvec)
-        eigs = spl.eigs(self.H_linop,k=6,return_eigenvectors=False)
-        self.weight = 1.0/eigs[np.argmax(np.abs(eigs))]
-        self.H_0_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.H_0_matvec,rmatvec=self.H_0_rmatvec)
-        self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.solve)
+        #eigs = spl.eigs(self.H_linop,k=6,return_eigenvectors=False)
+        #self.weight = 1.0/eigs[np.argmax(np.abs(eigs))]
+        #self.H_0_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.H_0_matvec,rmatvec=self.H_0_rmatvec)
+        self.block_solve_setup()
+        self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve)
 
         
 
@@ -355,20 +350,23 @@ class Floquet_system:
     def block_solve_setup(self):
         print('')
         print('Doing LU factorization of block matrix...')
-        self.Blocks = self.N_floquet_blocks*[sp.csc_array((self.N_elements,self.N_elements),dtype = np.complex128)]
+        self.Blocks = self.N_floquet_blocks*[sp.lil_matrix((self.N_elements,self.N_elements),dtype = np.complex128)]
         self.factors = []
         print(len(self.Blocks))
 
         identity = sp.identity(self.N_elements,dtype =np.complex128, format='csc')
 
         self.Blocks[0] = self.H + self.m_omega[0]*identity
+        self.Blocks[0].tocsc()
         self.factors.append(spl.splu(self.Blocks[0]))
         for i in range(self.N_floquet_blocks-1):
+            print(f'Doing block {i+1}/{self.N_floquet_blocks}')
             for j in range(self.N_elements):
                 #w = self.lgmres(self.Blocks[i],self.Z[:,j])
                 w = self.factors[i].solve(self.V[:,[j]].toarray())
                 self.Blocks[i+1][:,[j]] = self.H.getcol(j)-self.V@w
             self.Blocks[i+1] += self.m_omega[i+1]*identity
+            self.Blocks[i+1] = sp.csc_matrix(self.Blocks[i+1])
             self.factors.append(spl.splu(self.Blocks[i+1]))
 
         #self.Blocks = [sp.csr_array(Block) for Block in self.Blocks]
@@ -384,8 +382,8 @@ class Floquet_system:
     
     def block_solve(self,b):
         
-        print('')
-        print('Solving with factorized block matrix...')
+        #print('')
+        #print('Solving with factorized block matrix...')
         
         #y = sp.lil_array((self.N_elements,self.N_blocks),dtype = np.complex128)
         y = np.zeros((self.N_elements,self.N_floquet_blocks),dtype = np.complex128)
@@ -405,8 +403,8 @@ class Floquet_system:
             w = self.factors[i].solve(self.V@result[(i+1)*self.N_elements:(i+2)*self.N_elements])
             result[i*self.N_elements:(i+1)*self.N_elements] = y[:,i]-w 
 
-        print('Done!')
-        print('')
+        #print('Done!')
+        #print('')
 
         return result
 

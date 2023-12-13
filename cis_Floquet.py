@@ -51,12 +51,12 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     
     
 
-    H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
+    #H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
 
     H_test = sp.lil_matrix(H)
     print(f'# of nonzero in H: {H_test.nnz}, out of {N_elements**2}')
 
-    for i in range(N_blocks):
+    """ for i in range(N_blocks):
         H_fl[i*N_elements:(i+1)*N_elements,i*N_elements:(i+1)*N_elements] = H + m[i]*I_omega
 
 
@@ -65,9 +65,9 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
             H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = z*E_0/2 
 
     H_fl = sp.csr_matrix(H_fl)#,blocksize = (N_elements,N_elements))
-    print(f'# of nonzero in H_fl: {H_fl.nnz}, out of {N_floquet**2}')
+    print(f'# of nonzero in H_fl: {H_fl.nnz}, out of {N_floquet**2}') """
     
-    #H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = -1e-7)
+    H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy)
 
     #ones = np.ones(N_floquet,dtype = np.complex128)
     #bs = np.zeros(N_floquet,dtype = np.complex128)
@@ -90,8 +90,8 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     
     
     
-    eigs,vecs = spl.eigs(H_fl,sigma = energy,k=N_eigenvalues) 
-    #eigs,vecs = spl.eigs(H_fl_sys.H_invop,k=N_eigenvalues,maxiter=10,tol = 1e-1)#,sigma=0.0,OPinv = H_fl_sys.H_invop)
+    #eigs,vecs = spl.eigs(H_fl,sigma = energy,k=N_eigenvalues) 
+    eigs,vecs = spl.eigs(H_fl_sys.H_linop,k=N_eigenvalues,maxiter=500,sigma=energy,OPinv = H_fl_sys.H_invop)
 
     print('')
     print('----------------------------------------')    
