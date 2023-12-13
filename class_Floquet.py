@@ -356,7 +356,7 @@ class Floquet_system:
 
         identity = sp.identity(self.N_elements,dtype =np.complex128, format='csc')
 
-        self.Blocks[0] = self.H + self.m_omega[0]*identity
+        self.Blocks[0] = self.H + (self.m_omega[0]-self.shift)*identity
         self.Blocks[0].tocsc()
         self.factors.append(spl.splu(self.Blocks[0]))
         for i in range(self.N_floquet_blocks-1):
@@ -365,7 +365,7 @@ class Floquet_system:
                 #w = self.lgmres(self.Blocks[i],self.Z[:,j])
                 w = self.factors[i].solve(self.V[:,[j]].toarray())
                 self.Blocks[i+1][:,[j]] = self.H.getcol(j)-self.V@w
-            self.Blocks[i+1] += self.m_omega[i+1]*identity
+            self.Blocks[i+1] += (self.m_omega[i+1]-self.shift)*identity
             self.Blocks[i+1] = sp.csc_matrix(self.Blocks[i+1])
             self.factors.append(spl.splu(self.Blocks[i+1]))
 
