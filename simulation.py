@@ -95,9 +95,10 @@ class Simulation:
         N_floquet_states = self.H.shape[0]*(self.N_blocks_up+self.N_blocks_down + 1)
         vecs_shape = (N_floquet_states,self.N_eigenvalues*self.N_scan)
         self.vecs = np.zeros(vecs_shape,dtype = np.complex128)
+        self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
 
         for index,omega in np.ndenumerate(omega_vec):
-            self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+            self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues)       
 
         print('')
@@ -120,9 +121,10 @@ class Simulation:
         N_floquet_states = self.H.shape[0]*(self.N_blocks_up+self.N_blocks_down + 1)
         vecs_shape = (N_floquet_states,self.N_eigenvalues*self.N_scan)
         self.vecs = np.zeros(vecs_shape,dtype = np.complex128)
+        self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
 
         for index,E_0 in np.ndenumerate(E_0_vec):
-            self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+            self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues)
 
         print('')
@@ -156,6 +158,7 @@ class Simulation:
             np.savetxt(f'{self.output_folder}/intensity.out',scan_vec,header = 'Intensity [a.u.]')
 
         np.savetxt(f'{self.output_folder}/energies.out',self.eigs,header = 'Energies in [a.u], each row is one calculation')
+        np.savetxt(f'{self.output_folder}/max_block.out',self.max_block,header = 'The Floquet block with maximum norm, each row is one calculation')
         np.savetxt(f'{self.output_folder}/vecs.out',self.vecs,header = 'Amplitudes of eigenvectors stored in columns, each column block of size N_eigenvalues is one calculation')
 
         return

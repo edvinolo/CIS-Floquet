@@ -23,7 +23,8 @@ class Floquet_system:
         self.N_floquet_blocks = self.N_blocks_abs + self.N_blocks_em +1
         self.N_floquet = self.N_elements*self.N_floquet_blocks
 
-        self.m_omega = np.array([m*self.omega for m in range(-self.N_blocks_abs,self.N_blocks_em+1)])
+        self.m = list(range(-self.N_blocks_abs,self.N_blocks_em+1))
+        self.m_omega = np.array([m*self.omega for m in self.m])
 
         self.diag = np.zeros(self.N_floquet,dtype = np.complex128)
         self.diag_inv = np.zeros(self.N_floquet,dtype = np.complex128)

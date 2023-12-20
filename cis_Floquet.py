@@ -111,6 +111,20 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     print('----------------------------------------')
     print('')
 
+    max_block = np.zeros(N_eigenvalues,dtype = np.int64)
+    block = 0
+    for i in range(N_eigenvalues):
+        block_proj_max = -1
+        for j in range(H_fl_sys.N_floquet_blocks):
+            block_proj = sl.norm(vecs[H_fl_sys.N_elements*j:H_fl_sys.N_elements*(j+1),i])
+            if block_proj > block_proj_max:
+                block_proj_max = block_proj
+                block = j
+        max_block[i] = H_fl_sys.m[block]
+
+    
+
+
     #print(vecs[N_blocks*N_elements:N_blocks*N_elements+2,0])
     #print(vecs[N_blocks*N_elements:N_blocks*N_elements+2,1])
 
@@ -224,7 +238,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     
         format_plot(fig,ax,'State index','Amplitude')
 
-    return eigs,vecs
+    return eigs,vecs,max_block
 
 def E_au_I_wcm2(I):
     return np.sqrt(I/(3.51*10**(16)))
