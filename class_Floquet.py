@@ -353,7 +353,6 @@ class Floquet_system:
         print('Doing LU factorization of block matrix...')
         self.Blocks = self.N_floquet_blocks*[sp.lil_matrix((self.N_elements,self.N_elements),dtype = np.complex128)]
         self.factors = []
-        print(len(self.Blocks))
 
         identity = sp.identity(self.N_elements,dtype =np.complex128, format='csc')
 
