@@ -21,6 +21,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     tol = kwargs.get('tol',2e-1)
     I_p = kwargs.get('I_p',None)
     N_eigenvalues = kwargs.get('N_eig',6)
+    sort_type = kwargs.get('sort_type','real')
 
 
     N_elements = H.shape[0]
@@ -33,6 +34,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     
     print('')
     print('Diagonalizing floquet Hamiltonian')
+    print(f'shift: {energy}')
     print(f'omega: {omega}')
     print(f'E_0: {E_0}')
     U_p = E_0**2/(4*omega**2)
@@ -100,13 +102,16 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     print('----------------------------------------')
     print('')
 
-    indices = np.argsort(np.real(eigs))
+    if sort_type == 'real':
+        indices = np.argsort(np.real(eigs))
+    elif sort_type == 'abs':
+        indices = np.argsort(np.abs(eigs-energy))
     eigs = eigs[indices]
     vecs = vecs[:,indices]
 
     print('')
     print('----------------------------------------')    
-    print('Eigenvalues sorted by real part: ')
+    print(f'Eigenvalues sorted by {sort_type}: ')
     print(eigs)
     print('----------------------------------------')
     print('')
