@@ -63,7 +63,7 @@ class Simulation:
             print('')
             self.run_simulation = self.intensity_scan
 
-        if self.scan_type == 'omega_follow':
+        elif self.scan_type == 'omega_follow':
             print('----------------')
             print(f'Doing omega follow scan of {self.N_eigenvalues} Floquet energies close to {self.shift} [a.u.]')
             print(f'# Blocks_up: {self.N_blocks_up}, # Blocks_down: {self.N_blocks_down}')
@@ -84,7 +84,7 @@ class Simulation:
             self.run_simulation = self.intensity_follow
 
         else:
-            print(f'Unknown scan type: {self.scan_type}, the currently implemented ones are \'omega\' and \'intensity\'')
+            print(f'Unknown scan type: {self.scan_type}, the currently implemented ones are \'omega\', \'intensity\', \'omega_follow\', and \'intensity_follow\'')
             exit()
 
         return
