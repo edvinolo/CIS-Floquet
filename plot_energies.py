@@ -35,23 +35,28 @@ else:
 
 fig_re,ax_re = plt.subplots()
 fig_im,ax_im = plt.subplots()
+fig_trajs,ax_trajs = plt.subplots()
 ax_im.set_yscale('log')
 
 for i in range(energies.shape[1]):
     #for j in range(x_variable.shape[0]):
         #ax_re.plot(x_variable[j],energies_real[j,i],'s',color= colors[j,i])
         #ax_im.plot(x_variable[j],rates[j,i],'s',color = colors[j,i])
+    #ax_re.plot(x_variable,energies_real[:,i],'+')
     ax_re.plot(x_variable,energies_real[:,i],'+')
     ax_im.plot(x_variable,rates[:,i],'+')
+    ax_trajs.plot(energies_real[:,i],rates[:,i],'+')
 
 if sim_type == 'omega':
-    format_plot(fig_re,ax_re,'omega [a.u.]','Re [a.u.]')
+    format_plot(fig_re,ax_re,'omega [a.u.]','Re $E$ [a.u.]')
     format_plot(fig_im,ax_im,'omega [a.u.]','Rate [a.u.]')
 
 elif sim_type == 'intensity':
     ax_re.set_xscale('log')
     ax_im.set_xscale('log')
-    format_plot(fig_re,ax_re,'Intensity [W/cm$^2$]','Re [a.u.]')
+    format_plot(fig_re,ax_re,'Intensity [W/cm$^2$]','Re $E$ [a.u.]')
     format_plot(fig_im,ax_im,'Intensity [W/cm$^2$]','Rate [a.u.]')
+
+format_plot(fig_trajs,ax_trajs,'Re $E$ [a.u.]','Rate [a.u.]')
 
 plt.show()
