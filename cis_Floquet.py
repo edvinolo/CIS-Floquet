@@ -226,14 +226,14 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     if plot:
         fig,ax = plt.subplots()
 
-        ax.plot(np.abs(a_N))
+        #ax.plot(np.abs(a_N))
         #ax.plot(np.abs(b_N_1))
         for k in range(vecs.shape[1]):
             #if np.abs(np.dot(a_N,vecs[:,k])) >tol:
             #    ax.plot(np.abs(vecs[:,k]))
             ax.semilogy(np.abs(vecs[:,k]))
-            if k==1:
-                break
+            #if k==1:
+            #    break
 
         for i in range(N_blocks):
             ax.vlines(i*N_elements,1e-8,1,colors='k',linestyles='dashed')
@@ -242,11 +242,9 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
 
     
         format_plot(fig,ax,'State index','Amplitude')
+        plt.show()
 
     return eigs,vecs,max_block
 
 def E_au_I_wcm2(I):
     return np.sqrt(I/(3.51*10**(16)))
-
-plt.show()
-
