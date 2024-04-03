@@ -83,8 +83,28 @@ class Simulation:
             print('')
             self.run_simulation = self.intensity_follow
 
+        elif self.scan_type == 'circle':
+            print('----------------')
+            print(f'Doing circle scan of {self.N_eigenvalues} Floquet energies close to {self.shift} [a.u.]')
+            print(f'# Blocks_up: {self.N_blocks_up}, # Blocks_down: {self.N_blocks_down}')
+            print(f'Center: {self.start_range} [a.u.], {self.end_range} [W/cm2], N_points: {self.N_scan}')
+            print(f'Circle radius: {self.other_parameter} [a.u.]')
+            print('----------------')
+            print('')
+            self.run_simulation = self.circle_scan
+
+        elif self.scan_type == 'circle_follow':
+            print('----------------')
+            print(f'Doing circle follow scan of {self.N_eigenvalues} Floquet energies close to {self.shift} [a.u.]')
+            print(f'# Blocks_up: {self.N_blocks_up}, # Blocks_down: {self.N_blocks_down}')
+            print(f'Center: {self.start_range} [a.u.], {self.end_range} [W/cm2], N_points: {self.N_scan}')
+            print(f'Circle radius: {self.other_parameter} [a.u.]')
+            print('----------------')
+            print('')
+            self.run_simulation = self.circle_follow
+
         else:
-            print(f'Unknown scan type: {self.scan_type}, the currently implemented ones are \'omega\', \'intensity\', \'omega_follow\', and \'intensity_follow\'')
+            print(f'Unknown scan type: {self.scan_type}, the currently implemented ones are \'omega\', \'intensity\',\'circle\', \'omega_follow\', \'intensity_follow\', and \'circle_follow\'')
             exit()
 
         return
@@ -98,6 +118,7 @@ class Simulation:
         z_im = np.loadtxt(f'{self.cis_loc}/dipoles_im.dat')
         H_re = np.loadtxt(f'{self.cis_loc}/mat_re.dat')
         H_im = np.loadtxt(f'{self.cis_loc}/mat_im.dat')
+
         self.z = z_re + 1j*z_im
         self.H = H_re + 1j*H_im
         return
@@ -152,7 +173,36 @@ class Simulation:
         print('')
         self.save_output(intensity_vec)
         return
-    
+     
+    def circle_scan(self):
+        #Follow N_eigenvalues as the intensity and omega is varied around a circle
+        angle_vec = np.linspace(0,2*np.pi,self.N_scan)
+        radius = self.other_parameter
+        omega_vec = self.start_range*(1.0 + radius*np.sin(angle_vec))
+        intensity_vec = self.end_range*(1.0 + radius*np.cos(angle_vec))
+        E_0_vec = E_au_I_wcm2(intensity_vec)
+        
+        self.read_matrices()
+
+        self.eigs = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.complex128)
+        N_floquet_states = self.H.shape[0]*(self.N_blocks_up+self.N_blocks_down + 1)
+        vecs_shape = (N_floquet_states,self.N_eigenvalues*self.N_scan)
+        self.vecs = np.zeros(vecs_shape,dtype = np.complex128)
+        self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
+
+        for index,E_0 in np.ndenumerate(E_0_vec):
+            omega = omega_vec[index[0]]
+            self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,sort_type = 'abs')
+
+       
+
+        print('')
+        print('The calculations have finished!')
+        print('')
+        self.save_output_circle(omega_vec,intensity_vec)
+        return
+   
     def omega_follow(self):
         #Follow N_eigenvalues as the omega is scanned for fixed intensity
         omega_vec = np.linspace(self.start_range,self.end_range,self.N_scan)
@@ -207,7 +257,7 @@ class Simulation:
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]): 
                 #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
                 eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                          energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs')
+                        energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]])
                 self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
                 self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
                 self.max_block[index[0]+1,eig_index[0]] = blocks[0]
@@ -216,6 +266,44 @@ class Simulation:
         print('The calculations have finished!')
         print('')
         self.save_output(intensity_vec)
+        return
+
+    def circle_follow(self):
+        #Follow N_eigenvalues as the intensity and omega is varied around a circle
+        angle_vec = np.linspace(0,2*np.pi,self.N_scan)
+        radius = self.other_parameter
+        omega_vec = self.start_range*(1.0 + 0.02*radius*np.sin(angle_vec))
+        intensity_vec = self.end_range*(1.0 + radius*np.cos(angle_vec))
+        E_0_vec = E_au_I_wcm2(intensity_vec)
+
+        print(omega_vec)
+        print(E_0_vec)
+        
+        self.read_matrices()
+
+        self.eigs = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.complex128)
+        N_floquet_states = self.H.shape[0]*(self.N_blocks_up+self.N_blocks_down + 1)
+        vecs_shape = (N_floquet_states,self.N_eigenvalues*self.N_scan)
+        self.vecs = np.zeros(vecs_shape,dtype = np.complex128)
+        self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
+
+        self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega_vec[0],E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues)
+        
+        for index,E_0 in np.ndenumerate(E_0_vec[1:]):
+            omega = omega_vec[index[0]+1]
+            for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]): 
+                #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
+                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+                        energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]])
+                self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
+                self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
+                self.max_block[index[0]+1,eig_index[0]] = blocks[0]
+
+        print('')
+        print('The calculations have finished!')
+        print('')
+        self.save_output_circle(omega_vec,intensity_vec)
         return
 
     def make_outputfolder(self):
@@ -241,6 +329,25 @@ class Simulation:
             np.savetxt(f'{self.output_folder}/omega.out',scan_vec,header = 'omega [a.u.]')
         elif self.scan_type == 'intensity' or self.scan_type == 'intensity_follow':
             np.savetxt(f'{self.output_folder}/intensity.out',scan_vec,header = 'Intensity [a.u.]')
+
+        np.savetxt(f'{self.output_folder}/energies.out',self.eigs,header = 'Energies in [a.u], each row is one calculation')
+        np.savetxt(f'{self.output_folder}/max_block.out',self.max_block,header = 'The Floquet block with maximum norm, each row is one calculation')
+        if self.vecs is not None:
+            np.savetxt(f'{self.output_folder}/vecs.out',self.vecs,header = 'Amplitudes of eigenvectors stored in columns, each column block of size N_eigenvalues is one calculation')
+
+        return
+    
+    def save_output_circle(self,omega_vec,intensity_vec):
+        #Save the output of calculations, and copy input file to directory where output is stored
+        self.make_outputfolder()
+        print('')
+        print(f'Saving output in {self.output_folder}')
+        print('')
+
+        os.system(f'cp {self.input_file} {self.output_folder}')
+        
+        np.savetxt(f'{self.output_folder}/omega.out',omega_vec,header = 'omega [a.u.]')
+        np.savetxt(f'{self.output_folder}/intensity.out',intensity_vec,header = 'Intensity [a.u.]')
 
         np.savetxt(f'{self.output_folder}/energies.out',self.eigs,header = 'Energies in [a.u], each row is one calculation')
         np.savetxt(f'{self.output_folder}/max_block.out',self.max_block,header = 'The Floquet block with maximum norm, each row is one calculation')

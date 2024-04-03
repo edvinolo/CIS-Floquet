@@ -22,7 +22,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     I_p = kwargs.get('I_p',None)
     N_eigenvalues = kwargs.get('N_eig',6)
     sort_type = kwargs.get('sort_type','real')
-
+    prev_vec = kwargs.get('prev_vec',None)
 
     N_elements = H.shape[0]
     I_omega = omega*np.eye(N_elements,dtype = np.complex128)
@@ -106,6 +106,15 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
         indices = np.argsort(np.real(eigs))
     elif sort_type == 'abs':
         indices = np.argsort(np.abs(eigs-energy))
+    elif sort_type == 'vec':
+        proj = np.zeros(N_eigenvalues)
+        for i in range(N_eigenvalues):
+            proj[i] = np.abs(np.dot(prev_vec,vecs[:,i]))
+        print(f'Projections: {proj}')
+        indices = np.argsort(proj)
+        indices = np.flip(indices) #Need to reverse the indices so that largest projection comes first
+
+
     eigs = eigs[indices]
     vecs = vecs[:,indices]
 

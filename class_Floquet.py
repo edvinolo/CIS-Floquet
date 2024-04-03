@@ -1,5 +1,5 @@
 import numpy as np
-
+import time
 #Need to set environment varialbe to use propack
 import os
 #os.environ["SCIPY_USE_PROPACK"] = "true"
@@ -353,26 +353,32 @@ class Floquet_system:
         print('Doing LU factorization of block matrix...')
         self.Blocks = self.N_floquet_blocks*[sp.lil_matrix((self.N_elements,self.N_elements),dtype = np.complex128)]
         self.factors = []
-
+        #Block = np.zeros((self.N_elements,self.N_elements),dtype=np.complex128)
         identity = sp.identity(self.N_elements,dtype =np.complex128, format='csc')
 
+        t_1 = time.perf_counter()
         self.Blocks[0] = self.H + (self.m_omega[0]-self.shift)*identity
         self.Blocks[0].tocsc()
         self.factors.append(spl.splu(self.Blocks[0]))
+        #Block = self.Blocks[0].toarray()
+        #self.factors.append(sl.lu_factor(Block))
         for i in range(self.N_floquet_blocks-1):
             print(f'Doing block {i+1}/{self.N_floquet_blocks}')
             for j in range(self.N_elements):
                 #w = self.lgmres(self.Blocks[i],self.Z[:,j])
                 w = self.factors[i].solve(self.V[:,[j]].toarray())
                 self.Blocks[i+1][:,[j]] = self.H.getcol(j)-self.V@w
+                #Block[:,[j]] = self.H.getcol(j)-self.V@w 
             self.Blocks[i+1] += (self.m_omega[i+1]-self.shift)*identity
+            #Block += (self.m_omega[i+1]-self.shift)*identity
             self.Blocks[i+1] = sp.csc_matrix(self.Blocks[i+1])
             self.factors.append(spl.splu(self.Blocks[i+1]))
-
+            #self.factors.append(sl.lu_factor(Block))
         #self.Blocks = [sp.csr_array(Block) for Block in self.Blocks]
-
-        #print(f'# of nonzero in Blocks: {self.Blocks.nnz}, out of {self.N_elements**2*self.N_blocks}')
-        print('Done with LU factorization!')
+        t_2 = time.perf_counter()
+        for block in self.Blocks:
+            print(f'# of nonzero in Blocks: {block.nnz}, out of {self.N_elements**2}, sparisty: {(self.N_elements**2-block.nnz)/self.N_elements**2}')
+        print(f'Done with LU factorization! Wall time: {t_2-t_1} s')
         print('')
 
         return
