@@ -257,7 +257,7 @@ class Simulation:
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]): 
                 #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
                 eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                        energy = eig,plot = self.plot,N_eig = 4,sort_type = 'vec',prev_vec = self.vecs[:,index[0]+eig_index[0]])
+                        energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]])
                 self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
                 self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
                 self.max_block[index[0]+1,eig_index[0]] = blocks[0]
@@ -295,7 +295,7 @@ class Simulation:
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]): 
                 #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
                 eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                        energy = eig,plot = self.plot,N_eig = 8,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]])
+                        energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]])
                 self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
                 self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
                 self.max_block[index[0]+1,eig_index[0]] = blocks[0]
