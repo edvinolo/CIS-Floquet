@@ -1,5 +1,6 @@
 import os 
 import sys
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.linalg as sl
@@ -15,7 +16,6 @@ from effective_Hamiltonian import complex_Rabi
 
 
 def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
-    
     energy = kwargs.get('energy',0.0)
     plot = kwargs.get('plot',False)
     tol = kwargs.get('tol',2e-1)
@@ -31,7 +31,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     N_blocks = len(m)    
 
     N_floquet = N_elements*N_blocks
-    
+
     print('')
     print('Diagonalizing floquet Hamiltonian')
     print(f'shift: {energy}')
@@ -49,15 +49,12 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     print(f'Quiver radius: {alpha_0}')
     print(f'N_blocks: {N_blocks}, Abs: {N_blocks_up}, Em: {N_blocks_down}')
     print('')
-    
-    
-    
-
-    #H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
 
     H_test = sp.lil_matrix(H)
     print(f'# of nonzero in H: {H_test.nnz}, out of {N_elements**2}')
 
+    #This is for setting up the full Floquet Matrix explicitly, should not be needed
+    #H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
     """ for i in range(N_blocks):
         H_fl[i*N_elements:(i+1)*N_elements,i*N_elements:(i+1)*N_elements] = H + m[i]*I_omega
 
@@ -68,38 +65,19 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
 
     H_fl = sp.csr_matrix(H_fl)#,blocksize = (N_elements,N_elements))
     print(f'# of nonzero in H_fl: {H_fl.nnz}, out of {N_floquet**2}') """
-    
+
     H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy)
 
-    #ones = np.ones(N_floquet,dtype = np.complex128)
-    #bs = np.zeros(N_floquet,dtype = np.complex128)
-    #bs[N_blocks_up*N_elements+1] = 1.0
-    #diff = H_fl@ones - H_fl_sys.H_linop@ones
-    #print(f'Relative L_2 norm difference: {sl.norm(diff)/sl.norm(ones)}')
-
-    #spilu = spl.spilu(H_fl)
-    #M = spl.LinearOperator((N_floquet,N_floquet),spilu.solve)
-    #res,info = spl.gmres(H_fl,ones,M = M,maxiter = 40)
-    #print(f'GMRES info: {info}')
-
-    #H_fl_sys.block_solve_setup()
-    #res = H_fl_sys.block_solve(ones)
-    #res_2 = spl.spsolve(H_fl,bs)
-    #res = H_fl_sys.solve(ones)
-    #diff = ones-H_fl_sys.H_linop@res
-    #print(f'Relative L_2 norm difference: {sl.norm(diff)/sl.norm(ones)}')
-
-    
-    
-    
-    #eigs,vecs = spl.eigs(H_fl,sigma = energy,k=N_eigenvalues) 
+    t1 = time.perf_counter()
     eigs,vecs = spl.eigs(H_fl_sys.H_linop,k=N_eigenvalues,maxiter=500,sigma=energy,OPinv = H_fl_sys.H_invop)
+    t2 = time.perf_counter()
 
     print('')
     print('----------------------------------------')    
     print('Eigenvalues found by Arnoldi iteration: ')
     print(eigs)
     print('----------------------------------------')
+    print(f'Time for Arnoldi: {t2-t1} s')
     print('')
 
     if sort_type == 'real':
@@ -135,9 +113,6 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
                 block_proj_max = block_proj
                 block = j
         max_block[i] = H_fl_sys.m[block]
-
-    
-
 
     #print(vecs[N_blocks*N_elements:N_blocks*N_elements+2,0])
     #print(vecs[N_blocks*N_elements:N_blocks*N_elements+2,1])
@@ -198,8 +173,6 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     #print(sl.eigvals(h))
 
     for k in range(vecs.shape[1]):
-        
-        
         vecs[:,k] *= 1./np.sqrt(np.dot(vecs[:,k],vecs[:,k]))
         index = np.argmax(np.abs(vecs[:,k]))
         vecs[:,k] *=  np.exp(-1j*np.angle(vecs[index,k]))
@@ -209,17 +182,12 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     #print(np.dot(b_N_1,vecs[:,0]))
     #print(np.dot(b_N_1,vecs[:,1]))
 
-    
-
-    
-
-
 
     h_12 = (eigs[0]-eigs[1])*np.dot(a_N,vecs[:,0])*np.dot(b_N_1,vecs[:,0])
     print(f'h_12: {h_12}')
     h_12 = (eigs[1]-eigs[0])*np.dot(a_N,vecs[:,1])*np.dot(b_N_1,vecs[:,1])
     print(f'h_12: {h_12}')
-    
+
     h_11 = 0.5*(eigs[0]+ eigs[1]) -0.5*np.sqrt((eigs[0]-eigs[1])**2-4*h_12**2)
     h_22 = 0.5*(eigs[0]+ eigs[1]) +0.5*np.sqrt((eigs[0]-eigs[1])**2-4*h_12**2)
     print(f'h_11: {h_11}')
@@ -249,7 +217,6 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
 
         ax.set_ylim(ymin=1e-8)
 
-    
         format_plot(fig,ax,'State index','Amplitude')
         plt.show()
 

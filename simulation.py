@@ -1,4 +1,4 @@
-import os 
+import os
 import numpy as np
 from cis_Floquet import Floquet, E_au_I_wcm2
 
@@ -30,16 +30,26 @@ class Simulation:
             print(f'scan_range: {scan_range}')
             self.other_parameter = float(self.read_line(file))
             print(f'other_parameter: {self.other_parameter}')
-            plot = self.read_line(file)
+            plot_store_vecs = self.read_line(file).split()
+            plot = plot_store_vecs[0]
+            store_vecs = plot_store_vecs[1]
             print(f'plot: {plot}')
+            print(f'store_vecs: {store_vecs}')
 
         if plot == 't':
             self.plot = True
         elif plot == 'f':
             self.plot = False
         else:
-            print(f'Unknwown plot value {plot}, please use \'t\' or \'f\'' )
+            print(f'Unknwown plot value {plot}, please use \'t\' or \'f\'')
             exit()
+
+        if store_vecs == 't':
+            self.store_vecs = True
+        elif store_vecs == 'f':
+            self.store_vecs = False
+        else:
+            print(f'Unknown store_vecs value {store_vecs}, please use \'t\' or \'f\'')
 
 
         if self.scan_type == 'omega':
@@ -332,7 +342,7 @@ class Simulation:
 
         np.savetxt(f'{self.output_folder}/energies.out',self.eigs,header = 'Energies in [a.u], each row is one calculation')
         np.savetxt(f'{self.output_folder}/max_block.out',self.max_block,header = 'The Floquet block with maximum norm, each row is one calculation')
-        if self.vecs is not None:
+        if self.store_vecs and (self.vecs is not None):
             np.savetxt(f'{self.output_folder}/vecs.out',self.vecs,header = 'Amplitudes of eigenvectors stored in columns, each column block of size N_eigenvalues is one calculation')
 
         return
@@ -351,7 +361,7 @@ class Simulation:
 
         np.savetxt(f'{self.output_folder}/energies.out',self.eigs,header = 'Energies in [a.u], each row is one calculation')
         np.savetxt(f'{self.output_folder}/max_block.out',self.max_block,header = 'The Floquet block with maximum norm, each row is one calculation')
-        if self.vecs is not None:
+        if self.store_vecs and (self.vecs is not None):
             np.savetxt(f'{self.output_folder}/vecs.out',self.vecs,header = 'Amplitudes of eigenvectors stored in columns, each column block of size N_eigenvalues is one calculation')
 
         return
