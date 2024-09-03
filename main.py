@@ -1,4 +1,6 @@
 import sys
+
+sys.path.append('./src/')
 from simulation import Simulation
 
 def main():
