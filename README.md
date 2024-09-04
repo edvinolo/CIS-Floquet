@@ -7,7 +7,7 @@ For finding eigenvalues of Floquet Hamiltonian with the Hamiltonian from a CIS b
 
 ## How to use the fortran+MKL routines for block-LU factorization:
   
-  -Set the oneapi environment variable: 
+  -Set the oneapi environment variables: 
     ```source /path/to/intel/oneapi/setvars.sh```
   
   -Compile factor class and interface block_LU module with python:
