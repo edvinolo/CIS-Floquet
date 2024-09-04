@@ -4,9 +4,11 @@ import scipy.linalg as sl
 import scipy.sparse as sp
 import scipy.sparse.linalg as spl
 
+from block_LU import block_lu
+
 
 class Floquet_system:
-    def __init__(self,H,Z,omega,E_0,N_blocks_abs,N_blocks_em,shift = 0.0):
+    def __init__(self,H,Z,omega,E_0,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False):
         self.H = H.copy()
         self.V = 0.5*E_0*Z.copy()
         self.omega = omega
@@ -38,13 +40,20 @@ class Floquet_system:
         self.H = sp.csc_matrix(self.H)
         self.V = sp.csc_matrix(self.V)
 
-
         self.H_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.matvec,rmatvec=self.rmatvec,dtype = np.complex128)
+
+        if fortran:
+            self.V_dense = self.V.toarray()
+            self.block_solve_setup_fortran()
+            self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve_fortran,dtype = np.complex128)
+
+        else:
+            self.block_solve_setup()
+            self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve,dtype = np.complex128)
+
         #eigs = spl.eigs(self.H_linop,k=6,return_eigenvectors=False)
         #self.weight = 1.0/eigs[np.argmax(np.abs(eigs))]
         #self.H_0_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.H_0_matvec,rmatvec=self.H_0_rmatvec)
-        self.block_solve_setup()
-        self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve,dtype = np.complex128)
 
         return
 
@@ -262,6 +271,8 @@ class Floquet_system:
         return x_k_1
 
     def block_solve_setup(self):
+        #Perform tridiagonal Block LU factorization with Python routines
+
         print('')
         print('Doing LU factorization of block matrix...')
         #self.Blocks = self.N_floquet_blocks*[sp.lil_matrix((self.N_elements,self.N_elements),dtype = np.complex128)]
@@ -285,7 +296,20 @@ class Floquet_system:
 
         return
 
+    def block_solve_setup_fortran(self):
+        #Perform tridiagonal Block LU factorization with fortran routines
+
+        print('')
+        print('Doing LU factorization of block matrix...')
+        t_1 = time.perf_counter()
+        block_lu.block_lu_setup(self.H.toarray(),self.V_dense,self.shift,self.m_omega,self.N_floquet_blocks,self.N_elements)
+        t_2 = time.perf_counter()
+        print(f'Done with LU factorization! Wall time: {t_2-t_1} s')
+        print('')
+
     def block_solve(self,b):
+        #Solve LU facgored Block system using python routines
+
         #print('')
         #print('Solving with factorized block matrix...')
 
@@ -305,6 +329,15 @@ class Floquet_system:
 
         #print('Done!')
         #print('')
+
+        return result
+
+    def block_solve_fortran(self,b):
+        #Solve LU factored Block system using fortran routines
+
+        result = np.zeros(self.N_floquet,dtype=np.complex128)
+        #Better to keep a dense copy of V than to do toarray on every call to the solve routine.
+        block_lu.block_lu_solve(b,result,self.V_dense)
 
         return result
 

@@ -23,6 +23,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     N_eigenvalues = kwargs.get('N_eig',6)
     sort_type = kwargs.get('sort_type','real')
     prev_vec = kwargs.get('prev_vec',None)
+    fortran = kwargs.get('fortran',False)
 
     N_elements = H.shape[0]
     I_omega = omega*np.eye(N_elements,dtype = np.complex128)
@@ -66,7 +67,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     H_fl = sp.csr_matrix(H_fl)#,blocksize = (N_elements,N_elements))
     print(f'# of nonzero in H_fl: {H_fl.nnz}, out of {N_floquet**2}') """
 
-    H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy)
+    H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
 
     t1 = time.perf_counter()
     eigs,vecs = spl.eigs(H_fl_sys.H_linop,k=N_eigenvalues,maxiter=500,sigma=energy,OPinv = H_fl_sys.H_invop)
