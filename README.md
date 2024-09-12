@@ -26,4 +26,4 @@ For finding eigenvalues of Floquet Hamiltonian with the Hamiltonian from a CIS b
     cd ..
   
   
-  -Set use_fortran = f in input file
+  -Set use_fortran = t in input file
