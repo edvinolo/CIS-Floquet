@@ -33,7 +33,7 @@ contains
 
         this%error  = 0 !initialize error flag
         this%msglvl = 0 !print no statistical information
-        this%mtype  = 13 !complex nonsymmetric
+        this%mtype  = 6 !complex symmetric
         this%maxfct = 1 !Maximum number of factors
         this%mnum = 1 !Number of matrix to solve
 
@@ -56,10 +56,11 @@ contains
         !Please see the intel MKL online documentation for PARDISO for the complete meaning of all params
         this%iparm(1) = 1 !Do not use defaults for all iparm
         this%iparm(2) = 3 !Parallel fill in reordering
-        this%iparm(10) = 13 !Perturbation of small pivots by 1e-13
-        this%iparm(11) = 1 !Enable scaling vectors
-        this%iparm(13) = 1 !Enable weighted matching
-        this%iparm(24) = 0 !Change to 10 for two-level factorization (must disable param 11 and 13 if used)
+        this%iparm(10) = 8 !Perturbation of small pivots by 1e-8
+        this%iparm(11) = 0 !1: Enable scaling vectors
+        this%iparm(13) = 0 !1: Enable weighted matching
+        this%iparm(21) = 1 !Enable Bunch-Kaufman pivoting for complex symmetric matrix
+        this%iparm(24) = 10 !Change to 10 for two-level factorization (must disable param 11 and 13 if used)
         this%iparm(27) = 0 !Enable matrix checker, could be useful for debugging, but probably disable later
         this%iparm(35) = 1 !Use zero-based indexing, since arrays are comming from Python
 

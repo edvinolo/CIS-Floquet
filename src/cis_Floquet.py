@@ -89,7 +89,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
         print('----------------------------------------')
 
         if fortran:
-            H_fl_PARDISO = PARDISO_wrapper(H_fl)
+            H_fl_PARDISO = PARDISO_wrapper(sp.triu(H_fl,format='csr'))
             H_fl_invop = spl.LinearOperator(H_fl.shape, matvec = H_fl_PARDISO.solve, dtype = np.complex128)
         else:
             print('')
