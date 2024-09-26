@@ -45,7 +45,10 @@ class Simulation:
             print(f'plot: {plot}')
             print(f'store_vecs: {store_vecs}')
 
-            use_fortran = self.read_line(file)
+            factor_options = self.read_line(file).split()
+            form_H_fl = factor_options[0]
+            use_fortran = factor_options[1]
+            print(f'form_H_fl: {form_H_fl}')
             print(f'use_fortran: {use_fortran}')
 
 
@@ -63,6 +66,13 @@ class Simulation:
             self.store_vecs = False
         else:
             print(f'Unknown store_vecs value {store_vecs}, please use \'t\' or \'f\'')
+
+        if form_H_fl == 't':
+            self.form_H_fl = True
+        elif form_H_fl == 'f':
+            self.form_H_fl = False
+        else:
+            print(f'Unknown form_H_fl value {form_H_fl}, please use \'t\' or \'f\'')
 
         if use_fortran == 't':
             self.use_fortran = True
@@ -170,7 +180,8 @@ class Simulation:
 
         for index,omega in np.ndenumerate(omega_vec):
             self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, fortran = self.use_fortran)
+                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, fortran = self.use_fortran,
+                                                                                        form_H_fl = self.form_H_fl)
 
         print('')
         print('The calculations have finished!')
@@ -196,7 +207,8 @@ class Simulation:
 
         for index,E_0 in np.ndenumerate(E_0_vec):
             self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, fortran = self.use_fortran)
+                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, fortran = self.use_fortran,
+                                                                                        form_H_fl = self.form_H_fl)
 
         print('')
         print('The calculations have finished!')
@@ -224,7 +236,7 @@ class Simulation:
             omega = omega_vec[index[0]]
             self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,sort_type = 'abs',
-                                                                                        fortran = self.use_fortran)
+                                                                                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         print('')
         print('The calculations have finished!')
@@ -248,14 +260,14 @@ class Simulation:
 
         self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega_vec[0],E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, 
-                                                                                        fortran = self.use_fortran)
+                                                                                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         for index,omega in np.ndenumerate(omega_vec[1:]):
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]): 
                 #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
                 eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                           energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',
-                                          fortran = self.use_fortran)
+                                          fortran = self.use_fortran, form_H_fl = self.form_H_fl)
                 self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
                 self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
                 self.max_block[index[0]+1,eig_index[0]] = blocks[0]
@@ -283,14 +295,14 @@ class Simulation:
 
         self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega,E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
-                                                                                        fortran = self.use_fortran)
+                                                                                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
         
         for index,E_0 in np.ndenumerate(E_0_vec[1:]):
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]): 
                 #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
                 eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                         energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]],
-                        fortran = self.use_fortran)
+                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
                 self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
                 self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
                 self.max_block[index[0]+1,eig_index[0]] = blocks[0]
@@ -322,7 +334,7 @@ class Simulation:
 
         self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega_vec[0],E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
-                                                                                        fortran = self.use_fortran)
+                                                                                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
         
         for index,E_0 in np.ndenumerate(E_0_vec[1:]):
             omega = omega_vec[index[0]+1]
@@ -330,7 +342,7 @@ class Simulation:
                 #Here I set n_eig = 4 since I am only interested in one eigenvalue (could maybe use less?)
                 eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
                         energy = eig,plot = self.plot,N_eig = 4,sort_type = 'abs',prev_vec = self.vecs[:,index[0]+eig_index[0]],
-                        fortran = self.use_fortran)
+                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
                 self.eigs[index[0]+1,eig_index[0]] = eigs[0] 
                 self.vecs[:,index[0]+1 + eig_index[0]] = vecs[:,0]
                 self.max_block[index[0]+1,eig_index[0]] = blocks[0]

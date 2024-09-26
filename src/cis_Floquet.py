@@ -8,6 +8,7 @@ import scipy.sparse as sp
 import scipy.sparse.linalg as spl
 
 from class_Floquet import Floquet_system
+from PARDISO_wrapper import PARDISO_wrapper
 
 sys.path.append('./Effective-Ham/src/')
 sys.path.append('./format-plot/')
@@ -24,13 +25,12 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     sort_type = kwargs.get('sort_type','real')
     prev_vec = kwargs.get('prev_vec',None)
     fortran = kwargs.get('fortran',False)
+    form_H_fl = kwargs.get('form_H_fl',False)
 
+    #Set sizes
     N_elements = H.shape[0]
-    I_omega = omega*np.eye(N_elements,dtype = np.complex128)
-
     m = range(-N_blocks_up,N_blocks_down+1)
     N_blocks = len(m)    
-
     N_floquet = N_elements*N_blocks
 
     print('')
@@ -51,30 +51,86 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     print(f'N_blocks: {N_blocks}, Abs: {N_blocks_up}, Em: {N_blocks_down}')
     print('')
 
-    H_test = sp.lil_matrix(H)
-    print(f'# of nonzero in H: {H_test.nnz}, out of {N_elements**2}')
+    if form_H_fl:
+        #This is for setting up the full Floquet Matrix explicitly
+        print('')
+        print('----------------------------------------')
+        print('Assembling H_fl...')
+        print('')
+        t_1_assembly = time.perf_counter()
+        H_test = sp.csr_matrix(H)
+        print(f'# of nonzero in H: {H_test.nnz}, out of {N_elements**2}')
+        print(f'Sparsity: {H_test.nnz/N_elements**2}')
+        z_test = sp.csr_matrix(z)
 
-    #This is for setting up the full Floquet Matrix explicitly, should not be needed
-    #H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
-    """ for i in range(N_blocks):
-        H_fl[i*N_elements:(i+1)*N_elements,i*N_elements:(i+1)*N_elements] = H + m[i]*I_omega
+        I = sp.identity(N_elements,dtype = np.complex128)
+
+        H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
+        for i in range(N_blocks):
+            H_fl[i*N_elements:(i+1)*N_elements,i*N_elements:(i+1)*N_elements] = H_test + (m[i]*omega-energy)*I
 
 
-        if i !=N_blocks-1:
-            H_fl[i*N_elements:(i+1)*N_elements,(i+1)*N_elements:(i+2)*N_elements] = z*E_0/2 
-            H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = z*E_0/2 
+            if i !=N_blocks-1:
+                H_fl[i*N_elements:(i+1)*N_elements,(i+1)*N_elements:(i+2)*N_elements] = z_test*E_0/2
+                H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = z_test*E_0/2
 
-    H_fl = sp.csr_matrix(H_fl)#,blocksize = (N_elements,N_elements))
-    print(f'# of nonzero in H_fl: {H_fl.nnz}, out of {N_floquet**2}') """
+        #PARDISO wants CSR and spl.spilu wants CSC
+        if fortran:
+            H_fl = sp.csr_matrix(H_fl)
+        else:
+            H_fl = sp.csc_matrix(H_fl)
 
-    H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
+        t_2_assembly = time.perf_counter()
+        print('')
+        print(f'Done with assembly! Time: {t_2_assembly-t_1_assembly} s')
+        print('')
+        print(f'# of nonzero in H_fl: {H_fl.nnz}, out of {N_floquet**2}')
+        print(f'Sparsity: {H_fl.nnz/N_floquet**2}')
+        print('----------------------------------------')
 
-    t1 = time.perf_counter()
-    eigs,vecs = spl.eigs(H_fl_sys.H_linop,k=N_eigenvalues,maxiter=500,sigma=energy,OPinv = H_fl_sys.H_invop)
-    t2 = time.perf_counter()
+        if fortran:
+            H_fl_PARDISO = PARDISO_wrapper(H_fl)
+            H_fl_invop = spl.LinearOperator(H_fl.shape, matvec = H_fl_PARDISO.solve, dtype = np.complex128)
+        else:
+            print('')
+            print('Doing sparse LU factorization...')
+            t_1_LU = time.perf_counter()
+            H_fl_LU = spl.splu(H_fl)
+            t_2_LU = time.perf_counter()
+            print(f'Done! Wall time: {t_2_LU-t_1_LU} s')
+            H_fl_invop = spl.LinearOperator(H_fl.shape, matvec = H_fl_LU.solve, dtype = np.complex128)
+
+        ones = np.ones(N_floquet,dtype=np.complex128)
+        sol = H_fl_invop@ones
+        res = H_fl@sol-ones
+        print('')
+        print(f'Solve L2 relative residual: {sl.norm(res)/sl.norm(ones)}')
+        print('')
+
+        t1 = time.perf_counter()
+        eigs,vecs = spl.eigs(H_fl,k=N_eigenvalues,maxiter=500,sigma=energy,OPinv = H_fl_invop)
+        t2 = time.perf_counter()
+
+        if fortran:
+            H_fl_PARDISO.cleanup()
+
+
+    else:
+        H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
+
+        ones = np.ones(N_floquet,dtype=np.complex128)
+        sol = H_fl_sys.H_invop@ones
+        res = H_fl_sys.H_linop@sol-ones
+        print('')
+        print(f'Solve L2 relative residual: {sl.norm(res)/sl.norm(ones)}')
+        print('')
+
+        t1 = time.perf_counter()
+        eigs,vecs = spl.eigs(H_fl_sys.H_linop,k=N_eigenvalues,maxiter=500,sigma=energy,OPinv = H_fl_sys.H_invop)
+        t2 = time.perf_counter()
 
     print('')
-    print('----------------------------------------')    
+    print('----------------------------------------')
     print('Eigenvalues found by Arnoldi iteration: ')
     print(eigs)
     print('----------------------------------------')
@@ -108,12 +164,12 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     block = 0
     for i in range(N_eigenvalues):
         block_proj_max = -1
-        for j in range(H_fl_sys.N_floquet_blocks):
-            block_proj = sl.norm(vecs[H_fl_sys.N_elements*j:H_fl_sys.N_elements*(j+1),i])
+        for j in range(N_blocks):
+            block_proj = sl.norm(vecs[N_elements*j:N_elements*(j+1),i])
             if block_proj > block_proj_max:
                 block_proj_max = block_proj
                 block = j
-        max_block[i] = H_fl_sys.m[block]
+        max_block[i] = m[block]
 
     #print(vecs[N_blocks*N_elements:N_blocks*N_elements+2,0])
     #print(vecs[N_blocks*N_elements:N_blocks*N_elements+2,1])

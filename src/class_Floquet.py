@@ -40,7 +40,7 @@ class Floquet_system:
         self.H = sp.csc_matrix(self.H)
         self.V = sp.csc_matrix(self.V)
 
-        self.H_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.matvec,rmatvec=self.rmatvec,dtype = np.complex128)
+        self.H_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.matvec_shift,dtype = np.complex128)
 
         if fortran:
             self.V_dense = self.V.toarray()
@@ -62,6 +62,18 @@ class Floquet_system:
 
         for i in range(self.N_floquet_blocks):
             result[i*self.N_elements:(i+1)*self.N_elements] += self.H@v[i*self.N_elements:(i+1)*self.N_elements] + (self.m_omega[i])*v[i*self.N_elements:(i+1)*self.N_elements]
+
+            if i != self.N_floquet_blocks-1:
+                result[i*self.N_elements:(i+1)*self.N_elements] += self.V@v[(i+1)*self.N_elements:(i+2)*self.N_elements]
+                result[(i+1)*self.N_elements:(i+2)*self.N_elements] += self.V@v[i*self.N_elements:(i+1)*self.N_elements]
+
+        return result
+
+    def matvec_shift(self,v):
+        result = np.zeros(self.N_floquet,dtype = np.complex128)
+
+        for i in range(self.N_floquet_blocks):
+            result[i*self.N_elements:(i+1)*self.N_elements] += self.H@v[i*self.N_elements:(i+1)*self.N_elements] + (self.m_omega[i]-self.shift)*v[i*self.N_elements:(i+1)*self.N_elements]
 
             if i != self.N_floquet_blocks-1:
                 result[i*self.N_elements:(i+1)*self.N_elements] += self.V@v[(i+1)*self.N_elements:(i+2)*self.N_elements]
@@ -298,7 +310,6 @@ class Floquet_system:
 
     def block_solve_setup_fortran(self):
         #Perform tridiagonal Block LU factorization with fortran routines
-
         print('')
         print('Doing LU factorization of block matrix...')
         t_1 = time.perf_counter()
