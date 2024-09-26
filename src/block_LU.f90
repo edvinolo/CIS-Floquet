@@ -61,29 +61,32 @@ contains
     subroutine block_LU_solve(b,result,V,N_vector)
         !Now python supplies V on every call. Check if speed/memory usage is affected by storing a copy of V in the module
         integer :: N_vector
-        double complex, dimension(N_vector), intent(inout) :: b,result
+        double complex, dimension(N_vector), intent(in) :: b
+        double complex, dimension(N_vector), intent(inout) :: result
         double complex, dimension(:,:), intent(in) :: V
+
 
         double complex, dimension(:,:), allocatable :: y
         integer :: i,N_elements
 
+        result = dcmplx(0.d0,0.d0)
         N_elements = factors(1)%N_elements
 
         allocate(y(N_elements,N_blocks))
 
-        call factors(1)%solve(b(1:N_elements))
         call zcopy(N_elements,b(1:N_elements),1,y(:,1),1)
+        call factors(1)%solve(y(:,1))
 
         do i=2,N_blocks
             !b[i*self.N_elements:(i+1)*self.N_elements]-self.V@y[:,i-1]
-            call zgemv('N',N_elements,N_elements,dcmplx(-1.d0,0.d0),V,N_elements,y(:,i-1),1,&
-                        dcmplx(1.d0,0.d0),b(1+(i-1)*N_elements:i*N_elements),1)
-            call factors(i)%solve(b(1+(i-1)*N_elements:i*N_elements))
             call zcopy(N_elements,b(1+(i-1)*N_elements:i*N_elements),1,y(:,i),1)
+            call zgemv('N',N_elements,N_elements,dcmplx(-1.d0,0.d0),V,N_elements,y(:,i-1),&
+                        1,dcmplx(1.d0,0.d0),y(:,i),1)
+            call factors(i)%solve(y(:,i))
         end do
 
         !result[(self.N_floquet_blocks-1)*self.N_elements:] = y[:,self.N_floquet_blocks-1]
-        call zcopy(N_elements,y(:,N_blocks),1,result(1+(N_blocks-1)*N_elements:))
+        call zcopy(N_elements,y(:,N_blocks),1,result(1+(N_blocks-1)*N_elements:),1)
 
         !for i in reversed(range(self.N_floquet_blocks-1)):
         !    #w = self.lgmres(self.Blocks[i],self.Z@result[(i+1)*self.N_elements:(i+2)*self.N_elements])
