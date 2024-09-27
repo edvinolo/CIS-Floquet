@@ -74,7 +74,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
                 H_fl[i*N_elements:(i+1)*N_elements,(i+1)*N_elements:(i+2)*N_elements] = z_test*E_0/2
                 H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = z_test*E_0/2
 
-        #PARDISO wants CSR and spl.spilu wants CSC
+        #PARDISO wants CSR and spl.splu wants CSC
         if fortran:
             H_fl = sp.csr_matrix(H_fl)
         else:
@@ -89,7 +89,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
         print('----------------------------------------')
 
         if fortran:
-            H_fl_PARDISO = PARDISO_wrapper(H_fl)
+            H_fl_PARDISO = PARDISO_wrapper(sp.triu(H_fl,format='csr'))
             H_fl_invop = spl.LinearOperator(H_fl.shape, matvec = H_fl_PARDISO.solve, dtype = np.complex128)
         else:
             print('')
