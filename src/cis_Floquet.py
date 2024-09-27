@@ -74,7 +74,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
                 H_fl[i*N_elements:(i+1)*N_elements,(i+1)*N_elements:(i+2)*N_elements] = z_test*E_0/2
                 H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = z_test*E_0/2
 
-        #PARDISO wants CSR and spl.spilu wants CSC
+        #PARDISO wants CSR and spl.splu wants CSC
         if fortran:
             H_fl = sp.csr_matrix(H_fl)
         else:
