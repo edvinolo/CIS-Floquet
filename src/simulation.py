@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import scipy.sparse as sp
 from cis_Floquet import Floquet, E_au_I_wcm2
 
 class Simulation:
@@ -153,16 +154,52 @@ class Simulation:
         return file.readline().strip('\n')
 
     def read_matrices(self):
-        #Read dipole matrix and hamiltonian used for Floquet and convert to sparse format
-        z_re = np.loadtxt(f'{self.cis_loc}/dipoles_re.dat')
-        z_im = np.loadtxt(f'{self.cis_loc}/dipoles_im.dat')
-        H_re = np.loadtxt(f'{self.cis_loc}/mat_re.dat')
-        H_im = np.loadtxt(f'{self.cis_loc}/mat_im.dat')
+        #Read dipole matrix and hamiltonian used for Floquet in sparse format
+        #z_re = np.loadtxt(f'{self.cis_loc}/dipoles_re.dat')
+        #z_im = np.loadtxt(f'{self.cis_loc}/dipoles_im.dat')
+        #H_re = np.loadtxt(f'{self.cis_loc}/mat_re.dat')
+        #H_im = np.loadtxt(f'{self.cis_loc}/mat_im.dat')
 
-        self.z = z_re + 1j*z_im
-        self.H = H_re + 1j*H_im
+        #self.z = z_re + 1j*z_im
+        #self.H = H_re + 1j*H_im
+
+        self.H = self.read_COO(f'{self.cis_loc}/H_COO.dat')
+        self.z = self.read_COO(f'{self.cis_loc}/Z_COO.dat')
+
+        Ediag = self.read_Ediag(f'{self.cis_loc}/Ediag.dat')
+        Ediag = sp.diags(Ediag)
+        self.H += Ediag
+
         return
 
+    def read_COO(self,path):
+        #Read a complex COO matrix from file
+        with open(path,'r') as file:
+            shape = self.read_line(file).split()
+            shape = (int(shape[0]),int(shape[1]))
+            nnz = int(self.read_line(file))
+
+            if nnz == 0:
+                mat = sp.coo_matrix(shape,dtype=np.complex128)
+            else:
+                re = np.fromstring(self.read_line(file),sep = ' ')
+                im = np.fromstring(self.read_line(file),sep = ' ')
+                elements = re + 1j*im
+
+                assert elements.shape[0]==nnz, "Elements array has wrong lengt"
+
+                row = np.fromstring(self.read_line(file), dtype = np.int64, sep = ' ')
+                col = np.fromstring(self.read_line(file), dtype = np.int64, sep = ' ')
+                mat = sp.coo_matrix((elements,(row,col)),shape=shape)
+
+        return mat.tocsr()
+
+    def read_Ediag(self,path):
+        #Read diagonal elements of H
+        E = np.loadtxt(path)
+        diag = E[0,:] + 1j*E[1,:]
+
+        return diag
 
     def omega_scan(self):
         #Calculate Floquet energies and vectors for different omega and fixed intensity
