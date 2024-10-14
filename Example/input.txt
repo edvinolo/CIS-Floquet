@@ -1,0 +1,11 @@
+/path/to/atomic_data
+./Example
+l
+2
+0.0 1e-7	
+3 3
+intensity_follow
+1.5e12 1.5e14 10
+0.797208094738112050
+f f
+t t
