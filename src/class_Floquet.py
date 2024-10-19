@@ -8,7 +8,7 @@ from block_LU import block_lu
 
 
 class Floquet_system:
-    def __init__(self,H,Z,omega,E_0,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False):
+    def __init__(self,H,Z,omega,E_0,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False,factorize=True):
         self.H = H.copy()
         self.V = 0.5*E_0*Z.copy()
         self.omega = omega
@@ -25,31 +25,32 @@ class Floquet_system:
         self.m = list(range(-self.N_blocks_abs,self.N_blocks_em+1))
         self.m_omega = np.array([m*self.omega for m in self.m])
 
-        self.diag = np.zeros(self.N_floquet,dtype = np.complex128)
-        self.diag_inv = np.zeros(self.N_floquet,dtype = np.complex128)
-        for i in range(self.N_floquet_blocks):
-            self.diag[i*self.N_elements:(i+1)*self.N_elements] = np.diag(self.H) + self.m_omega[i]
+        #self.diag = np.zeros(self.N_floquet,dtype = np.complex128)
+        #self.diag_inv = np.zeros(self.N_floquet,dtype = np.complex128)
+        #for i in range(self.N_floquet_blocks):
+        #    self.diag[i*self.N_elements:(i+1)*self.N_elements] = np.diag(self.H) + self.m_omega[i]
 
-        for i in range(self.N_floquet):
-            if np.abs(self.diag[i]) >= 1e-13:
-                self.diag_inv[i] = 1.0/self.diag[i]
+        #for i in range(self.N_floquet):
+        #    if np.abs(self.diag[i]) >= 1e-13:
+        #        self.diag_inv[i] = 1.0/self.diag[i]
 
-        self.M_inv = sp.diags(self.diag_inv)
-        self.M = sp.diags(self.diag)
+        #self.M_inv = sp.diags(self.diag_inv)
+        #self.M = sp.diags(self.diag)
 
-        self.H = sp.csc_matrix(self.H)
-        self.V = sp.csc_matrix(self.V)
+        #self.H = sp.csc_matrix(self.H)
+        #self.V = sp.csc_matrix(self.V)
 
         self.H_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.matvec_shift,dtype = np.complex128)
 
-        if fortran:
-            self.V_dense = self.V.toarray()
-            self.block_solve_setup_fortran()
-            self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve_fortran,dtype = np.complex128)
+        if factorize:
+            if fortran:
+                self.V_dense = self.V.toarray()
+                self.block_solve_setup_fortran()
+                self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve_fortran,dtype = np.complex128)
 
-        else:
-            self.block_solve_setup()
-            self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve,dtype = np.complex128)
+            else:
+                self.block_solve_setup()
+                self.H_invop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.block_solve,dtype = np.complex128)
 
         #eigs = spl.eigs(self.H_linop,k=6,return_eigenvectors=False)
         #self.weight = 1.0/eigs[np.argmax(np.abs(eigs))]
