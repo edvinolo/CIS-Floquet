@@ -61,22 +61,56 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
         H_test = sp.csr_matrix(H)
         print(f'# of nonzero in H: {H_test.nnz}, out of {N_elements**2}')
         print(f'Sparsity: {H_test.nnz/N_elements**2}')
-        z_test = sp.csr_matrix(z)
+        V = 0.5*E_0*sp.csr_matrix(z)
 
         I = sp.identity(N_elements,dtype = np.complex128)
 
-        H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
-        for i in range(N_blocks):
-            H_fl[i*N_elements:(i+1)*N_elements,i*N_elements:(i+1)*N_elements] = H_test + (m[i]*omega-energy)*I
+        if fortran:
+            H_test = sp.triu(H_test,format='csr')
+            H_omega = H_test.copy()
+            V = V.tocoo()
+
+            nnz = H_test.nnz + V.nnz + 1 #Add 1 sinze energy of gs is set to zero, but will not be zero with the shift
+            data = np.zeros(N_blocks*nnz-V.nnz,dtype = np.complex128)
+            row = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int)
+            col = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int)
+
+            ptr = 0
+            for i in range(N_blocks):
+                H_omega = H_test + (m[i]*omega-energy)*I
+                H_omega = H_omega.tocoo()
+
+                data[ptr:ptr+H_omega.nnz] = H_omega.data
+                col[ptr:ptr+H_omega.nnz] = H_omega.col + i*N_elements
+                row[ptr:ptr+H_omega.nnz] = H_omega.row + i*N_elements
+
+                ptr += H_omega.nnz
+
+                if i != N_blocks - 1:
+                    data[ptr:ptr+V.nnz] = V.data
+                    col[ptr:ptr+V.nnz] = V.col + (i+1)*N_elements
+                    row[ptr:ptr+V.nnz] = V.row + i*N_elements
+
+                    ptr += V.nnz
+
+            V = V.tocsr()
 
 
-            if i !=N_blocks-1:
-                H_fl[i*N_elements:(i+1)*N_elements,(i+1)*N_elements:(i+2)*N_elements] = z_test*E_0/2
-                H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = z_test*E_0/2
+        else:
+            H_fl = sp.lil_matrix((N_floquet,N_floquet),dtype = np.complex128)
+            for i in range(N_blocks):
+                H_fl[i*N_elements:(i+1)*N_elements,i*N_elements:(i+1)*N_elements] = H_test + (m[i]*omega-energy)*I
+
+
+                if i !=N_blocks-1:
+                    H_fl[i*N_elements:(i+1)*N_elements,(i+1)*N_elements:(i+2)*N_elements] = V
+                    H_fl[(i+1)*N_elements:(i+2)*N_elements,i*N_elements:(i+1)*N_elements] = V
+
 
         #PARDISO wants CSR and spl.splu wants CSC
         if fortran:
-            H_fl = sp.csr_matrix(H_fl)
+            #H_fl = sp.csr_matrix(H_fl)
+            H_fl = sp.csr_matrix((data,(row,col)),shape = (N_floquet,N_floquet))
         else:
             H_fl = sp.csc_matrix(H_fl)
 
@@ -102,7 +136,12 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
 
         ones = np.ones(N_floquet,dtype=np.complex128)
         sol = H_fl_invop@ones
-        res = H_fl@sol-ones
+
+        if fortran:
+            H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran,factorize = False)
+            res = H_fl_sys.H_linop@sol-ones
+        else:
+            res = H_fl@sol-ones
         print('')
         print(f'Solve L2 relative residual: {sl.norm(res)/sl.norm(ones)}')
         print('')
