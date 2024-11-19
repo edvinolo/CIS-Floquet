@@ -72,8 +72,8 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
 
             nnz = H_test.nnz + V.nnz + 1 #Add 1 sinze energy of gs is set to zero, but will not be zero with the shift
             data = np.zeros(N_blocks*nnz-V.nnz,dtype = np.complex128)
-            row = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int)
-            col = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int)
+            row = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int64)
+            col = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int64)
 
             ptr = 0
             for i in range(N_blocks):
