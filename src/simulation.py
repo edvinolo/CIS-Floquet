@@ -13,7 +13,7 @@ class Simulation:
             self.output = self.read_line(file)
             print(f'output: {self.output}')
 
-            self.gauge = self.read_line(file) #Not needed at the moment, only length gauge is currently implemented
+            self.gauge = self.read_line(file)
             print(f'gauge: {self.gauge}')
 
             self.N_eigenvalues = int(self.read_line(file))
@@ -52,6 +52,9 @@ class Simulation:
             print(f'form_H_fl: {form_H_fl}')
             print(f'use_fortran: {use_fortran}')
 
+        if not (self.gauge == 'l' or self.gauge == 'v'):
+            print(f'Wrong gauge: {self.gauge}. Please use length (l) or velocity (v)')
+            exit()
 
         if plot == 't':
             self.plot = True
@@ -217,8 +220,8 @@ class Simulation:
 
         for index,omega in np.ndenumerate(omega_vec):
             self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, fortran = self.use_fortran,
-                                                                                        form_H_fl = self.form_H_fl)
+                                                                                        self.gauge, energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
+                                                                                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         print('')
         print('The calculations have finished!')
@@ -244,8 +247,8 @@ class Simulation:
 
         for index,E_0 in np.ndenumerate(E_0_vec):
             self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues, fortran = self.use_fortran,
-                                                                                        form_H_fl = self.form_H_fl)
+                                                                                        self.gauge, energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
+                                                                                        fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         print('')
         print('The calculations have finished!')
@@ -272,7 +275,7 @@ class Simulation:
         for index,E_0 in np.ndenumerate(E_0_vec):
             omega = omega_vec[index[0]]
             self.eigs[index[0],:],self.vecs[:,index[0]:index[0] + self.N_eigenvalues],self.max_block[index[0],:] = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,sort_type = 'abs',
+                                                                                        self.gauge, energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,sort_type = 'abs',
                                                                                         fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         print('')
@@ -296,13 +299,13 @@ class Simulation:
         self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
 
         self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega_vec[0],E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
-                                                                                        energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
+                                                                                        self.gauge, energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
                                                                                         fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         for index,omega in np.ndenumerate(omega_vec[1:]):
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]):
                 #Here I set n_eig = 2 since I am only interested in one eigenvalue (could maybe use less?)
-                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down, self.gauge,
                                           energy = eig,plot = self.plot,N_eig = 2,sort_type = 'vec',prev_vec = self.vecs[:,(index[0])*self.N_eigenvalues + eig_index[0]],
                                           fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
@@ -332,14 +335,14 @@ class Simulation:
         self.vecs = np.zeros(vecs_shape,dtype = np.complex128)
         self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
 
-        self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega,E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+        self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega,E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down, self.gauge,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
                                                                                         fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
         for index,E_0 in np.ndenumerate(E_0_vec[1:]):
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]):
                 #Here I set n_eig = 2 since I am only interested in one eigenvalue (could maybe use less?)
-                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down, self.gauge,
                         energy = eig,plot = self.plot,N_eig = 2,sort_type = 'vec',prev_vec = self.vecs[:,(index[0])*self.N_eigenvalues + eig_index[0]],
                         fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
@@ -373,7 +376,7 @@ class Simulation:
         self.vecs = np.zeros(vecs_shape,dtype = np.complex128)
         self.max_block = np.zeros((self.N_scan,self.N_eigenvalues),dtype = np.int64)
 
-        self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega_vec[0],E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+        self.eigs[0,:],self.vecs[:,:self.N_eigenvalues],self.max_block[0,:] = Floquet(omega_vec[0],E_0_vec[0],self.H,self.z,self.N_blocks_up,self.N_blocks_down, self.gauge,
                                                                                         energy = self.shift,plot = self.plot,N_eig = self.N_eigenvalues,
                                                                                         fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
@@ -381,7 +384,7 @@ class Simulation:
             omega = omega_vec[index[0]+1]
             for eig_index,eig in np.ndenumerate(self.eigs[index[0],:]):
                 #Here I set n_eig = 2 since I am only interested in one eigenvalue (could maybe use less?)
-                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down,
+                eigs,vecs,blocks = Floquet(omega,E_0,self.H,self.z,self.N_blocks_up,self.N_blocks_down, self.gauge,
                         energy = eig,plot = self.plot,N_eig = 2,sort_type = 'vec',prev_vec = self.vecs[:,(index[0])*self.N_eigenvalues + eig_index[0]],
                         fortran = self.use_fortran, form_H_fl = self.form_H_fl)
 
@@ -426,7 +429,7 @@ class Simulation:
             np.savetxt(f'{self.output_folder}/vecs.out',self.vecs,header = 'Amplitudes of eigenvectors stored in columns, each column block of size N_eigenvalues is one calculation')
 
         return
-    
+
     def save_output_circle(self,omega_vec,intensity_vec):
         #Save the output of calculations, and copy input file to directory where output is stored
         self.make_outputfolder()
@@ -435,7 +438,7 @@ class Simulation:
         print('')
 
         os.system(f'cp {self.input_file} {self.output_folder}')
-        
+
         np.savetxt(f'{self.output_folder}/omega.out',omega_vec,header = 'omega [a.u.]')
         np.savetxt(f'{self.output_folder}/intensity.out',intensity_vec,header = 'Intensity [a.u.]')
 

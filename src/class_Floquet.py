@@ -8,11 +8,10 @@ from block_LU import block_lu
 
 
 class Floquet_system:
-    def __init__(self,H,Z,omega,E_0,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False,factorize=True):
+    def __init__(self,H,V,omega,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False,factorize=True):
         self.H = H.copy()
-        self.V = 0.5*E_0*Z.copy()
+        self.V = V.copy()
         self.omega = omega
-        self.E_0 = E_0
         self.N_blocks_abs = N_blocks_abs
         self.N_blocks_em = N_blocks_em
         self.shift = shift

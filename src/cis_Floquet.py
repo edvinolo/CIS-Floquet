@@ -16,7 +16,7 @@ from plot_utils import format_plot
 from effective_Hamiltonian import complex_Rabi
 
 
-def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
+def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
     energy = kwargs.get('energy',0.0)
     plot = kwargs.get('plot',False)
     tol = kwargs.get('tol',2e-1)
@@ -26,6 +26,8 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     prev_vec = kwargs.get('prev_vec',None)
     fortran = kwargs.get('fortran',False)
     form_H_fl = kwargs.get('form_H_fl',False)
+
+    A_0 = E_0/omega
 
     #Set sizes
     N_elements = H.shape[0]
@@ -38,6 +40,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     print(f'shift: {energy}')
     print(f'omega: {omega}')
     print(f'E_0: {E_0}')
+    print(f'A_0: {A_0}')
     U_p = E_0**2/(4*omega**2)
     alpha_0 = E_0/omega**2
     print(f'U_p: {U_p}')
@@ -51,6 +54,14 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
     print(f'N_blocks: {N_blocks}, Abs: {N_blocks_up}, Em: {N_blocks_down}')
     print('')
 
+    if gauge == 'l':
+        V = 0.5*E_0*sp.csr_matrix(z)
+    elif gauge == 'v':
+        V = 0.5*A_0*sp.csr_matrix(z)
+    else:
+        print(f'Wrong gauge: {gauge}. Please use length (l) or velocity (v)')
+        exit()
+
     if form_H_fl:
         #This is for setting up the full Floquet Matrix explicitly
         print('')
@@ -61,7 +72,6 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
         H_test = sp.csr_matrix(H)
         print(f'# of nonzero in H: {H_test.nnz}, out of {N_elements**2}')
         print(f'Sparsity: {H_test.nnz/N_elements**2}')
-        V = 0.5*E_0*sp.csr_matrix(z)
 
         I = sp.identity(N_elements,dtype = np.complex128)
 
@@ -138,7 +148,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
         sol = H_fl_invop@ones
 
         if fortran:
-            H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran,factorize = False)
+            H_fl_sys = Floquet_system(H,V,omega,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran,factorize = False)
             res = H_fl_sys.H_linop@sol-ones
         else:
             res = H_fl@sol-ones
@@ -155,7 +165,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,**kwargs):
 
 
     else:
-        H_fl_sys = Floquet_system(H,z,omega,E_0,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
+        H_fl_sys = Floquet_system(H,V,omega,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
 
         ones = np.ones(N_floquet,dtype=np.complex128)
         sol = H_fl_sys.H_invop@ones
