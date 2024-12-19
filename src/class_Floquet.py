@@ -8,9 +8,10 @@ from block_LU import block_lu
 
 
 class Floquet_system:
-    def __init__(self,H,V,omega,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False,factorize=True):
+    def __init__(self,H,V,gauge,omega,N_blocks_abs,N_blocks_em,shift = 0.0, fortran = False,factorize=True):
         self.H = H.copy()
         self.V = V.copy()
+        self.gauge = gauge
         self.omega = omega
         self.N_blocks_abs = N_blocks_abs
         self.N_blocks_em = N_blocks_em
@@ -39,6 +40,11 @@ class Floquet_system:
         #self.H = sp.csc_matrix(self.H)
         #self.V = sp.csc_matrix(self.V)
 
+        #Select correct matvec
+        if self.gauge == 'l':
+            self.matvec_shift = self.matvec_shift_len
+        elif self.gauge == 'v':
+            self.matvec_shift = self.matvec_shift_vel
         self.H_linop = spl.LinearOperator((self.N_floquet,self.N_floquet),matvec = self.matvec_shift,dtype = np.complex128)
 
         if factorize:
@@ -69,7 +75,7 @@ class Floquet_system:
 
         return result
 
-    def matvec_shift(self,v):
+    def matvec_shift_len(self,v):
         result = np.zeros(self.N_floquet,dtype = np.complex128)
 
         for i in range(self.N_floquet_blocks):
@@ -78,6 +84,18 @@ class Floquet_system:
             if i != self.N_floquet_blocks-1:
                 result[i*self.N_elements:(i+1)*self.N_elements] += self.V@v[(i+1)*self.N_elements:(i+2)*self.N_elements]
                 result[(i+1)*self.N_elements:(i+2)*self.N_elements] += self.V@v[i*self.N_elements:(i+1)*self.N_elements]
+
+        return result
+
+    def matvec_shift_vel(self,v):
+        result = np.zeros(self.N_floquet,dtype = np.complex128)
+
+        for i in range(self.N_floquet_blocks):
+            result[i*self.N_elements:(i+1)*self.N_elements] += self.H@v[i*self.N_elements:(i+1)*self.N_elements] + (self.m_omega[i]-self.shift)*v[i*self.N_elements:(i+1)*self.N_elements]
+
+            if i != self.N_floquet_blocks-1:
+                result[i*self.N_elements:(i+1)*self.N_elements] += self.V@v[(i+1)*self.N_elements:(i+2)*self.N_elements]
+                result[(i+1)*self.N_elements:(i+2)*self.N_elements] += self.V.T@v[i*self.N_elements:(i+1)*self.N_elements]
 
         return result
 

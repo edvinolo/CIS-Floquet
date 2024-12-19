@@ -17,12 +17,13 @@ module class_PARDISO
     end type PARDISO_solver
 
 contains
-    subroutine PARDISO_setup(this,n,nnz,a,ia,ja)
+    subroutine PARDISO_setup(this,n,nnz,a,ia,ja,mtype)
         class(PARDISO_solver), intent(inout) :: this
         integer, intent(in) :: n,nnz
         double complex, dimension(0:nnz-1), intent(in) :: A
         integer, dimension(0:n), intent(in) :: ia
         integer, dimension(0:nnz-1), intent(in) :: ja
+        integer, intent(in) :: mtype
 
         integer :: i !loop index
 
@@ -33,10 +34,9 @@ contains
 
         this%error  = 0 !initialize error flag
         this%msglvl = 0 !print no statistical information
-        this%mtype  = 6 !complex symmetric
+        this%mtype  = mtype ! 6 for complex symmetric, 13 for complex general
         this%maxfct = 1 !Maximum number of factors
         this%mnum = 1 !Number of matrix to solve
-
 
         !.. Initialize the internal solver memory pointer. This is only
         ! necessary for the FIRST call of the PARDISO solver.
@@ -56,10 +56,20 @@ contains
         !Please see the intel MKL online documentation for PARDISO for the complete meaning of all params
         this%iparm(1) = 1 !Do not use defaults for all iparm
         this%iparm(2) = 3 !Parallel fill in reordering
-        this%iparm(10) = 8 !Perturbation of small pivots by 1e-8
+
+        if (this%mtype.eq.6) then
+            this%iparm(10) = 8 !Perturbation of small pivots by 1e-8
+        else if ( this%mtype.eq.13 ) then
+            this%iparm(10) = 13
+        end if
+
         this%iparm(11) = 0 !1: Enable scaling vectors
         this%iparm(13) = 0 !1: Enable weighted matching
-        this%iparm(21) = 1 !Enable Bunch-Kaufman pivoting for complex symmetric matrix
+
+        if (this%mtype.eq.6) then
+            this%iparm(21) = 1 !Enable Bunch-Kaufman pivoting for complex symmetric matrix
+        end if
+
         this%iparm(24) = 10 !Change to 10 for two-level factorization (must disable param 11 and 13 if used)
         this%iparm(27) = 0 !Enable matrix checker, could be useful for debugging, but probably disable later
         this%iparm(35) = 1 !Use zero-based indexing, since arrays are comming from Python

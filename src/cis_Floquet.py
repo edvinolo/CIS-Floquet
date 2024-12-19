@@ -57,7 +57,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
     if gauge == 'l':
         V = 0.5*E_0*sp.csr_matrix(z)
     elif gauge == 'v':
-        V = 0.5*A_0*sp.csr_matrix(z)
+        V = 0.5*A_0*sp.csr_matrix(z)/1j
     else:
         print(f'Wrong gauge: {gauge}. Please use length (l) or velocity (v)')
         exit()
@@ -76,34 +76,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
         I = sp.identity(N_elements,dtype = np.complex128)
 
         if fortran:
-            H_test = sp.triu(H_test,format='csr')
-            H_omega = H_test.copy()
-            V = V.tocoo()
-
-            nnz = H_test.nnz + V.nnz + 1 #Add 1 sinze energy of gs is set to zero, but will not be zero with the shift
-            data = np.zeros(N_blocks*nnz-V.nnz,dtype = np.complex128)
-            row = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int64)
-            col = np.zeros(N_blocks*nnz-V.nnz, dtype = np.int64)
-
-            ptr = 0
-            for i in range(N_blocks):
-                H_omega = H_test + (m[i]*omega-energy)*I
-                H_omega = H_omega.tocoo()
-
-                data[ptr:ptr+H_omega.nnz] = H_omega.data
-                col[ptr:ptr+H_omega.nnz] = H_omega.col + i*N_elements
-                row[ptr:ptr+H_omega.nnz] = H_omega.row + i*N_elements
-
-                ptr += H_omega.nnz
-
-                if i != N_blocks - 1:
-                    data[ptr:ptr+V.nnz] = V.data
-                    col[ptr:ptr+V.nnz] = V.col + (i+1)*N_elements
-                    row[ptr:ptr+V.nnz] = V.row + i*N_elements
-
-                    ptr += V.nnz
-
-            V = V.tocsr()
+            data,row,col = H_fl_setup(H_test,I,V,m,omega,energy,N_blocks,N_elements)
 
 
         else:
@@ -133,7 +106,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
         print('----------------------------------------')
 
         if fortran:
-            H_fl_PARDISO = PARDISO_wrapper(sp.triu(H_fl,format='csr'))
+            H_fl_PARDISO = PARDISO_wrapper(H_fl,'c_sym')
             H_fl_invop = spl.LinearOperator(H_fl.shape, matvec = H_fl_PARDISO.solve, dtype = np.complex128)
         else:
             print('')
@@ -148,7 +121,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
         sol = H_fl_invop@ones
 
         if fortran:
-            H_fl_sys = Floquet_system(H,V,omega,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran,factorize = False)
+            H_fl_sys = Floquet_system(H,V,gauge,omega,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran,factorize = False)
             res = H_fl_sys.H_linop@sol-ones
         else:
             res = H_fl@sol-ones
@@ -165,7 +138,7 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
 
 
     else:
-        H_fl_sys = Floquet_system(H,V,omega,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
+        H_fl_sys = Floquet_system(H,V,gauge,omega,N_blocks_up,N_blocks_down,shift = energy,fortran = fortran)
 
         ones = np.ones(N_floquet,dtype=np.complex128)
         sol = H_fl_sys.H_invop@ones
@@ -330,3 +303,38 @@ def Floquet(omega,E_0,H,z,N_blocks_up,N_blocks_down,gauge,**kwargs):
 
 def E_au_I_wcm2(I):
     return np.sqrt(I/(3.51*10**(16)))
+
+#Assemble H_fl in COO format
+def H_fl_setup(H_test,I,V,m,omega,energy,N_blocks,N_elements):
+    #For assemble only the upper triangular part of H_fl, since it is complex symmetric
+
+    H_test = sp.triu(H_test,format='csr')
+    V = V.tocoo()
+
+    nnz = N_blocks*(H_test.nnz + 1) + (N_blocks-1)*V.nnz #Add 1 since energy of gs is set to zero, but will not be zero with the shift
+    data = np.zeros(nnz,dtype = np.complex128)
+    row = np.zeros(nnz, dtype = np.int64)
+    col = np.zeros(nnz, dtype = np.int64)
+
+    ptr = 0
+    for i in range(N_blocks):
+        H_omega = H_test + (m[i]*omega-energy)*I
+        H_omega = H_omega.tocoo()
+
+        data[ptr:ptr+H_omega.nnz] = H_omega.data
+        col[ptr:ptr+H_omega.nnz] = H_omega.col + i*N_elements
+        row[ptr:ptr+H_omega.nnz] = H_omega.row + i*N_elements
+
+        ptr += H_omega.nnz
+
+        if i != N_blocks - 1:
+            data[ptr:ptr+V.nnz] = V.data
+            col[ptr:ptr+V.nnz] = V.col + (i+1)*N_elements
+            row[ptr:ptr+V.nnz] = V.row + i*N_elements
+
+            ptr += V.nnz
+
+    V = V.tocsr()
+    return data,row,col
+
+    return

@@ -7,14 +7,15 @@ module mod_PARDISO
     public :: setup, solve, cleanup
 
     contains
-        subroutine setup(n,nnz,a,ia,ja)
+        subroutine setup(n,nnz,a,ia,ja,mtype)
             integer, intent(in) :: n,nnz
             double complex, dimension(0:nnz-1), intent(in) :: a
             integer, dimension(0:n), intent(in) :: ia
             integer, dimension(0:nnz-1), intent(in) :: ja
+            integer, intent(in) :: mtype
 
             !Think about adding support for low-rank updates, since sparsity pattern never really changes.
-            call solver%setup(n,nnz,a,ia,ja)
+            call solver%setup(n,nnz,a,ia,ja,mtype)
         end subroutine setup
 
         subroutine solve(n,nnz,a,ia,ja,x,b)
